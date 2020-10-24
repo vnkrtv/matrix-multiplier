@@ -1,4 +1,4 @@
-# Matrix Calculator
+# Matrix multiplier
 
 ## Description 
 
