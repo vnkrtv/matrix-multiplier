@@ -2,9 +2,10 @@
 
 #include <qt5/QtConcurrent/QtConcurrent>
 
-
 /*
-map<pair<int, int>, int> MapFunction(const pair<Graph, map<int, Node*>> & InterData) {
+using std::pair;
+
+map<pair<int, int>, int> MapFunction(const pair<torch::Tensor&, pair<int, int>> & InterData) {
 
 
 

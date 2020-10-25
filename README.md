@@ -11,5 +11,7 @@ Written on libtorch (C++ Distributions of PyTorch).
  --conditions-count, -n [integer] Conditions count  
  --timestamps-count, -m [integer] Timestamps count  
          --threshold, -t [number] Threshold  
-                           --cuda Training in cuda
+             --seed, -s [integer] Random seed  
+            --output, -o [string] Result file name (stdout by default)  
+                           --cuda Training on GPU with CUDA 
 ```

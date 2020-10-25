@@ -4,13 +4,16 @@
 #include "args.hpp"
 #include "mapreduce.hpp"
 
+using namespace std::chrono;
 using std::string;
 
 struct Args {
     int _conditionsCount;
     int _timestampsCount;
     float _threshold;
+    int _seed = 21;
     bool _trainOnCuda = false;
+    string _resultsFileName = "stdout";
 
 
     Args() = default;
@@ -24,50 +27,45 @@ struct Args {
         f(_conditionsCount, "--conditions-count", "-n", args::help("Conditions count"), args::required());
         f(_timestampsCount, "--timestamps-count", "-m", args::help("Timestamps count"), args::required());
         f(_threshold, "--threshold", "-t", args::help("Threshold"), args::required());
-        f(_trainOnCuda, "--cuda", args::help("Training in cuda"));
+        f(_seed, "--seed", "-s", args::help("Random seed"));
+        f(_resultsFileName, "--output", "-o", args::help("Result file name (stdout by default)"));
+        f(_trainOnCuda, "--cuda", args::help("Training on GPU with CUDA"), args::set(true));
     }
 
     void run() {
         std::cout << "Conditions count: " << _conditionsCount << std::endl;
         std::cout << "Timestamps count: " << _timestampsCount << std::endl;
-        std::cout << "Matrix " << _timestampsCount << "x" << _timestampsCount << std::endl;
+        std::cout << "Matrix " << _timestampsCount << "x" << _conditionsCount << std::endl;
         std::cout << "Threshold: " << _threshold << std::endl;
+        std::cout << "Random seed: " << _seed << std::endl;
+        std::cout << "Results file name: " << _resultsFileName << std::endl;
 
         torch::Device device = torch::kCPU;
         if (torch::cuda::is_available() && _trainOnCuda) {
             std::cout << "CUDA device count: " << torch::cuda::device_count() << std::endl;
             std::cout << "CUDA is available! Training on GPU." << std::endl;
-            device = torch::kCUDA;
+            matrix::setDevice(torch::kCUDA);
         } else {
+            if (!torch::cuda::is_available()) {
+                std::cout << "CUDA is not available." << std::endl;
+            }
+            matrix::setDevice(torch::kCPU);
             std::cout << "Training on CPU." << std::endl;
         }
 
-        map<vector<int>, float> mapResults;
-        unordered_map<int,torch::Tensor> mapCache;
-        auto matrix = genTensor(_timestampsCount, _conditionsCount).to(torch::kCUDA);
+        matrix::initMatrix(_timestampsCount, _conditionsCount);
+        matrix::setThreshold(_threshold);
+        matrix::setRandomSeed(_seed);
+
+        auto start = steady_clock::now();
         for (int i = 0; i < _conditionsCount; i++) {
             auto vecParents = vector<int>({i});
-            checkConditions(
-                    matrix,
-                    i,
-                    vecParents,
-                    mapResults,
-                    mapCache,
-                    _conditionsCount,
-                    _threshold);
+            matrix::checkCondition(i, vecParents);
         }
-        auto vec2str = [&](const vector<int>& vec) -> string {
-            string s = "[";
-            for (auto& item : vec) {
-                s += std::to_string(item);
-                s += ", ";
-            }
-            s[s.size() - 2] = ']';
-            return s;
-        };
-        for (auto& [key, value] : mapResults) {
-            std::cout << vec2str(key) << "=> " << value << std::endl;
-        }
+        double duration = duration_cast<milliseconds>(steady_clock::now() - start).count();
+
+        matrix::writeResults(_resultsFileName);
+        std::cout << "Finished in " << duration << " milliseconds. Write results to " << _resultsFileName << std::endl;
         /*
         auto matr = genTensor()
 
