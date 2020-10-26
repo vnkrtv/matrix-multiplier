@@ -27,7 +27,7 @@ struct Args {
         f(_conditionsCount, "--conditions-count", "-n", args::help("Conditions count"), args::required());
         f(_timestampsCount, "--timestamps-count", "-m", args::help("Timestamps count"), args::required());
         f(_threshold, "--threshold", "-t", args::help("Threshold"), args::required());
-        f(_seed, "--seed", "-s", args::help("Random seed"));
+        f(_seed, "--seed", "-s", args::help("Random seed (21 by default)"));
         f(_resultsFileName, "--output", "-o", args::help("Result file name (stdout by default)"));
         f(_trainOnCuda, "--cuda", args::help("Training on GPU with CUDA"), args::set(true));
     }
