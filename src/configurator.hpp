@@ -74,9 +74,11 @@ struct Args {
                     qTasks.emplace(std::make_pair(i, vecParents));
 
                 }
-//                while (!qTasks.empty()) {
-//                    matrix::checkConditionRecursive(i, vecParents);
-//                }
+                while (!qTasks.empty()) {
+                    auto pairTask = qTasks.front();
+                    matrix::checkCondition(pairTask.first, pairTask.second, qTasks);
+                    qTasks.pop();
+                }
             } else {
 
             }
@@ -87,7 +89,7 @@ struct Args {
                     matrix::checkConditionRecursive(i, vecParents);
                 }
             } else {
-                matrix::mapResults = mapReduce::MapReduce(_conditionsCount);
+                matrix::mapResults = mapReduce::MapReduceRecursive(_conditionsCount);
             }
         }
         double duration = duration_cast<milliseconds>(steady_clock::now() - start).count();

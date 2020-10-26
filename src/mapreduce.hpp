@@ -19,8 +19,8 @@ namespace mapReduce {
 
     void checkConditionMapReduce(int ,  const vector<int>& , MatrixProcessor& );
     void Reduce(map<vector<int>, float>& , const map<vector<int>, float>& );
-    map<vector<int>, float> Map(const vector<int>& );
-    map<vector<int>, float> MapReduce(int );
+    map<vector<int>, float> MapRecursive(const vector<int>& );
+    map<vector<int>, float> MapReduceRecursive(int );
 
 } // mapReduce
 
@@ -50,7 +50,7 @@ void mapReduce::checkConditionMapReduce(
     }
 }
 
-map<vector<int>, float> mapReduce::Map(const vector<int> & vecInnerData) {
+map<vector<int>, float> mapReduce::MapRecursive(const vector<int> & vecInnerData) {
     auto mapResults = map<vector<int>, float>();
     auto processor = MatrixProcessor();
     for (auto& item : vecInnerData) {
@@ -65,7 +65,7 @@ void mapReduce::Reduce(map<vector<int>, float>& mapResults, const map<vector<int
         mapResults[it.first] = it.second;
 }
 
-map<vector<int>, float> mapReduce::MapReduce(int conditionsCount) {
+map<vector<int>, float> mapReduce::MapReduceRecursive(int conditionsCount) {
     auto idealThreadCount = QThread::idealThreadCount();
     vector<vector<int>> vecData;
 
@@ -82,5 +82,5 @@ map<vector<int>, float> mapReduce::MapReduce(int conditionsCount) {
         last = last + delta < conditionsCount ? last + delta : conditionsCount;
     }
 
-    return QtConcurrent::blockingMappedReduced(vecData, Map, Reduce);
+    return QtConcurrent::blockingMappedReduced(vecData, MapRecursive, Reduce);
 }

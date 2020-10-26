@@ -14,6 +14,8 @@ List of options:
 - ```--seed, -s [integer]``` - Random seed (21 by default)
 - ```--output, -o [string]``` - Result file name (stdout by default)
 - ```--cuda``` - Training on GPU with CUDA
+- ```--map-reduce``` - Use map reduce  
+- ```--no-recursion``` - Algorithm without recursion  
 - ```--help, -h``` - Displaying help
 
 ## Installing
