@@ -13,6 +13,8 @@ struct Args {
     float _threshold;
     int _seed = 21;
     bool _trainOnCuda = false;
+    bool _mapReduce = false;
+    bool _noRecursion = false;
     string _resultsFileName = "stdout";
 
 
@@ -30,6 +32,8 @@ struct Args {
         f(_seed, "--seed", "-s", args::help("Random seed (21 by default)"));
         f(_resultsFileName, "--output", "-o", args::help("Result file name (stdout by default)"));
         f(_trainOnCuda, "--cuda", args::help("Training on GPU with CUDA"), args::set(true));
+        f(_mapReduce, "--map-reduce", args::help("Use map reduce"), args::set(true));
+        f(_noRecursion, "--no-recursion", args::help("Algorithm without recursion"), args::set(true));
     }
 
     void run() {
@@ -53,46 +57,42 @@ struct Args {
             std::cout << "Training on CPU." << std::endl;
         }
 
+        if (_mapReduce) {
+            std::cout << "Using MapReduce computing: ideal thread count - " << QThread::idealThreadCount() << std::endl;
+        }
+
         matrix::initMatrix(_timestampsCount, _conditionsCount);
         matrix::setThreshold(_threshold);
         matrix::setRandomSeed(_seed);
 
         auto start = steady_clock::now();
-        for (int i = 0; i < _conditionsCount; i++) {
-            auto vecParents = vector<int>({i});
-            matrix::checkCondition(i, vecParents);
+        if (_noRecursion) {
+            if (!_mapReduce) {
+                auto qTasks = queue<pair<int, vector<int>>>();
+                for (int i = 0; i < _conditionsCount; i++) {
+                    auto vecParents = vector<int>({i});
+                    qTasks.emplace(std::make_pair(i, vecParents));
+
+                }
+//                while (!qTasks.empty()) {
+//                    matrix::checkConditionRecursive(i, vecParents);
+//                }
+            } else {
+
+            }
+        } else {
+            if (!_mapReduce) {
+                for (int i = 0; i < _conditionsCount; i++) {
+                    auto vecParents = vector<int>({i});
+                    matrix::checkConditionRecursive(i, vecParents);
+                }
+            } else {
+                matrix::mapResults = mapReduce::MapReduce(_conditionsCount);
+            }
         }
         double duration = duration_cast<milliseconds>(steady_clock::now() - start).count();
 
         matrix::writeResults(_resultsFileName);
         std::cout << "Finished in " << duration << " milliseconds. Write results to " << _resultsFileName << std::endl;
-        /*
-        auto matr = genTensor()
-
-
-        auto availableThreadsCount = QThread::idealThreadCount();
-        vector<pair<Graph, map<int, Node*>>> VData;
-
-        int first = 0;
-        int delta = copiedGraph.getNodesCount() < availableThreadsCount ? 1 : round(float(copiedGraph.getNodesCount()) / availableThreadsCount); // copiedGraph.getNodesCount() / Ithread;
-        int last = delta;
-        for (int i = 0; i < availableThreadsCount; i++) {
-            auto item = std::make_pair(copiedGraph, map<int, Node*>());
-            auto mapIt = copiedGraph._mapNodes.begin();
-            for (int i = 0; i < first; i++, mapIt++);
-            for (int i = 0; i < last; i++, mapIt++) {
-                if (mapIt == copiedGraph._mapNodes.end()) {
-                    break;
-                }
-                item.second[mapIt->first] = mapIt->second;
-            }
-
-            VData.emplace_back(item);
-            first = last;
-            last = last + delta < copiedGraph.getNodesCount() ? last + delta : copiedGraph.getNodesCount();
-        }
-
-        auto mapEdges = QtConcurrent::blockingMappedReduced(VData, MapFunction, ReduceFunction);
-        */
     }
 };

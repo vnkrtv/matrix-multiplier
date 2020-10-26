@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <queue>
 #include <chrono>
 #include <unordered_map>
 #include <map>
@@ -12,6 +13,8 @@ using std::string;
 using std::ofstream;
 using std::vector;
 using std::map;
+using std::pair;
+using std::queue;
 using std::unordered_map;
 
 namespace matrix {
@@ -26,7 +29,8 @@ namespace matrix {
     void initMatrix(int , int );
     void setThreshold(float );
     void setRandomSeed(int );
-    void checkCondition(int , const vector<int>& );
+    void checkConditionRecursive(int , const vector<int>& );
+    void checkCondition(int , const vector<int>& , queue<pair<int, vector<int>>>& );
     void writeResults(const string& );
 
 } // matrix
@@ -49,7 +53,7 @@ void matrix::setRandomSeed(int seed) {
     torch::manual_seed(seed);
 }
 
-void matrix::checkCondition(
+void matrix::checkConditionRecursive(
         int conditionNum,
         const vector<int>& vecParentNodes) {
     torch::Tensor resVector;
@@ -66,9 +70,32 @@ void matrix::checkCondition(
         if (resVector[0][i].item<float>() < threshold) {
             mapResults[updVecParentNodes] = resVector[0][i].item<float>();
         } else {
-            checkCondition(
+            checkConditionRecursive(
                     conditionNum + i + 1,
                     updVecParentNodes);
+        }
+    }
+}
+
+void matrix::checkCondition(
+        int conditionNum,
+        const vector<int>& vecParentNodes,
+        queue<pair<int, vector<int>>>& qTasks) {
+    torch::Tensor resVector;
+    if (mapCache.find(conditionNum) != mapCache.end()) {
+        resVector = mapCache[conditionNum];
+    } else {
+        resVector = matrix.slice(1, conditionNum, conditionNum + 1).to(device).reshape({1, -1})
+                .mm(matrix.slice(1, conditionNum + 1).to(device)).to(device);
+        mapCache[conditionNum] = resVector;
+    }
+    for (int i = 0; i < resVector.sizes()[1]; i++) {
+        auto updVecParentNodes = vector<int>(vecParentNodes);
+        updVecParentNodes.emplace_back(conditionNum + i + 1);
+        if (resVector[0][i].item<float>() < threshold) {
+            mapResults[updVecParentNodes] = resVector[0][i].item<float>();
+        } else {
+            qTasks.emplace(conditionNum + i + 1, updVecParentNodes);
         }
     }
 }
