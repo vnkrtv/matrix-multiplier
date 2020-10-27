@@ -15,7 +15,7 @@ List of options:
 - ```--output, -o [string]``` - Result file name (stdout by default)
 - ```--cuda``` - Training on GPU with CUDA
 - ```--map-reduce``` - Use map reduce  
-- ```--no-recursion``` - Algorithm without recursion  
+- ```--recursion``` - Algorithm with recursion  
 - ```--help, -h``` - Displaying help
 
 ## Installing

@@ -14,7 +14,7 @@ struct Args {
     int _seed = 21;
     bool _trainOnCuda = false;
     bool _mapReduce = false;
-    bool _noRecursion = false;
+    bool _recursively = false;
     string _resultsFileName = "stdout";
 
 
@@ -33,7 +33,7 @@ struct Args {
         f(_resultsFileName, "--output", "-o", args::help("Result file name (stdout by default)"));
         f(_trainOnCuda, "--cuda", args::help("Training on GPU with CUDA"), args::set(true));
         f(_mapReduce, "--map-reduce", args::help("Use map reduce"), args::set(true));
-        f(_noRecursion, "--no-recursion", args::help("Algorithm without recursion"), args::set(true));
+        f(_recursively, "--recursion", args::help("Algorithm with recursion"), args::set(true));
     }
 
     void run() {
@@ -42,7 +42,7 @@ struct Args {
         std::cout << "Matrix " << _timestampsCount << "x" << _conditionsCount << std::endl;
         std::cout << "Threshold: " << _threshold << std::endl;
         std::cout << "Random seed: " << _seed << std::endl;
-        std::cout << "Results file name: " << _resultsFileName << std::endl;
+        std::cout << "Results file name: " << _resultsFileName << std::endl << std::endl;
 
         torch::Device device = torch::kCPU;
         if (torch::cuda::is_available() && _trainOnCuda) {
@@ -60,18 +60,21 @@ struct Args {
         if (_mapReduce) {
             std::cout << "Using MapReduce computing: ideal thread count - " << QThread::idealThreadCount() << std::endl;
         }
+        if (_recursively) {
+            std::cout << "Using recursive realization" << std::endl;
+        }
 
         matrix::initMatrix(_timestampsCount, _conditionsCount);
         matrix::setThreshold(_threshold);
         matrix::setRandomSeed(_seed);
 
         auto start = steady_clock::now();
-        if (_noRecursion) {
+        if (!_recursively) {
             if (!_mapReduce) {
                 auto qTasks = queue<pair<int, vector<int>>>();
-                for (int i = 0; i < _conditionsCount; i++) {
-                    auto vecParents = vector<int>({i});
-                    qTasks.emplace(std::make_pair(i, vecParents));
+                for (int conditionNum = 0; conditionNum < _conditionsCount; conditionNum++) {
+                    auto vecParents = vector<int>({conditionNum});
+                    qTasks.emplace(std::make_pair(conditionNum, vecParents));
 
                 }
                 while (!qTasks.empty()) {
@@ -80,16 +83,16 @@ struct Args {
                     qTasks.pop();
                 }
             } else {
-
+                matrix::mapResults = mapReduce::MapReduce(_conditionsCount, false);
             }
         } else {
             if (!_mapReduce) {
-                for (int i = 0; i < _conditionsCount; i++) {
-                    auto vecParents = vector<int>({i});
-                    matrix::checkConditionRecursive(i, vecParents);
+                for (int conditionNum = 0; conditionNum < _conditionsCount; conditionNum++) {
+                    auto vecParents = vector<int>({conditionNum});
+                    matrix::checkConditionRecursive(conditionNum, vecParents);
                 }
             } else {
-                matrix::mapResults = mapReduce::MapReduceRecursive(_conditionsCount);
+                matrix::mapResults = mapReduce::MapReduce(_conditionsCount, true);
             }
         }
         double duration = duration_cast<milliseconds>(steady_clock::now() - start).count();
