@@ -69,32 +69,34 @@ struct Args {
         matrix::setRandomSeed(_seed);
 
         auto start = steady_clock::now();
-        if (!_recursively) {
-            if (!_mapReduce) {
-                auto qTasks = queue<pair<int, vector<int>>>();
-                for (int conditionNum = 0; conditionNum < _conditionsCount; conditionNum++) {
-                    auto vecParents = vector<int>({conditionNum});
-                    qTasks.emplace(std::make_pair(conditionNum, vecParents));
+        
+        if (!_recursively && !_mapReduce) {
+            auto qTasks = queue<pair<int, vector<int>>>();
+            for (int conditionNum = 0; conditionNum < _conditionsCount; conditionNum++) {
+                auto vecParents = vector<int>({conditionNum});
+                qTasks.emplace(std::make_pair(conditionNum, vecParents));
 
-                }
-                while (!qTasks.empty()) {
-                    auto pairTask = qTasks.front();
-                    matrix::checkCondition(pairTask.first, pairTask.second, qTasks);
-                    qTasks.pop();
-                }
-            } else {
-                matrix::mapResults = mapReduce::MapReduce(_conditionsCount, false);
             }
-        } else {
-            if (!_mapReduce) {
-                for (int conditionNum = 0; conditionNum < _conditionsCount; conditionNum++) {
-                    auto vecParents = vector<int>({conditionNum});
-                    matrix::checkConditionRecursive(conditionNum, vecParents);
-                }
-            } else {
-                matrix::mapResults = mapReduce::MapReduce(_conditionsCount, true);
+            while (!qTasks.empty()) {
+                auto pairTask = qTasks.front();
+                matrix::checkCondition(pairTask.first, pairTask.second, qTasks);
+                qTasks.pop();
             }
         }
+        if (_recursively && !_mapReduce) {
+            for (int conditionNum = 0; conditionNum < _conditionsCount; conditionNum++) {
+                auto vecParents = vector<int>({conditionNum});
+                matrix::checkConditionRecursive(conditionNum, vecParents);
+            }
+        }
+
+        if (!_recursively && _mapReduce) {
+            matrix::mapResults = mapReduce::MapReduce(_conditionsCount, false);
+        }
+        if (_recursively && _mapReduce) {
+            matrix::mapResults = mapReduce::MapReduce(_conditionsCount, true);
+        }
+
         double duration = duration_cast<milliseconds>(steady_clock::now() - start).count();
 
         matrix::writeResults(_resultsFileName);
