@@ -3,7 +3,7 @@
 ## Description 
 
 Calculates all possible products of vectors in a given matrix with specified threshold, preserving the final product chains.  
-Written on libtorch (C++ Distributions of PyTorch).
+Written using libtorch (C++ Distributions of PyTorch) and Qt5 Concurrent module (for MapReduce realization.
 
 ## Options
 
