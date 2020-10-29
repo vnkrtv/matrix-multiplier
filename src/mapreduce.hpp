@@ -1,6 +1,10 @@
 #include "matrix.hpp"
 
 #include <qt5/QtConcurrent/QtConcurrent>
+#include <cmath>
+#include <deque>
+
+using std::deque;
 
 namespace mapReduce {
 
@@ -9,12 +13,7 @@ namespace mapReduce {
         map<vector<int>, float> _mapResults;
         unordered_map<int, torch::Tensor> _mapCache;
 
-        MatrixProcessor() {
-            _matrix = matrix::matrix;
-            _mapResults = map<vector<int>, float>();
-            _mapCache = unordered_map<int, torch::Tensor>();
-        }
-
+        MatrixProcessor();
     };
 
     void checkConditionMapReduceRecursive(int ,  const vector<int>& , MatrixProcessor& );
@@ -25,6 +24,12 @@ namespace mapReduce {
     map<vector<int>, float> MapReduce(int , bool );
 
 } // mapReduce
+
+mapReduce::MatrixProcessor::MatrixProcessor() {
+    _matrix = matrix::matrix;
+    _mapResults = map<vector<int>, float>();
+    _mapCache = unordered_map<int, torch::Tensor>();
+}
 
 void mapReduce::checkConditionMapReduceRecursive(
         int conditionNum,
@@ -110,17 +115,37 @@ map<vector<int>, float> mapReduce::MapReduce(int conditionsCount, bool recursive
     auto idealThreadCount = QThread::idealThreadCount();
     vector<vector<int>> vecData;
 
-    int first = 0;
-    int delta = conditionsCount < idealThreadCount ? 1 : round(float(conditionsCount) / idealThreadCount);
-    int last = delta;
-    for (int i = 0; i < idealThreadCount; i++) {
-        auto vecItem = vector<int>();
-        for (int i = first; i < last; i++) {
-            vecItem.emplace_back(i);
+    deque<int> qNumbers;
+    for (int conditionNum = 0; conditionNum < conditionsCount; conditionNum++) {
+        qNumbers.emplace_back(conditionNum);
+    }
+
+    int delta = conditionsCount < idealThreadCount ? 1 : std::round(float(conditionsCount) / idealThreadCount);
+    if (delta == 1) {
+        vecData = vector<vector<int>>(idealThreadCount);
+        for (int i = 0; i < conditionsCount; i++) {
+            vecData[i] = vector<int>({qNumbers.front()});
+            qNumbers.pop_front();
         }
-        vecData.emplace_back(vecItem);
-        first = last;
-        last = last + delta < conditionsCount ? last + delta : conditionsCount;
+        while(!qNumbers.empty()) {
+            vecData[idealThreadCount - 1].emplace_back(qNumbers.front());
+            qNumbers.pop_front();
+        }
+    } else {
+        for (int i = 0; i < idealThreadCount; i++) {
+            auto vecItem = vector<int>();
+
+            for (int item = 0; item < (i + 1 < qNumbers.size() ? i + 1 : qNumbers.size()); item++) {
+                vecItem.emplace_back(qNumbers.front());
+                qNumbers.pop_front();
+            }
+            for (int item = 0; item < (delta - i - 1 <  qNumbers.size() ? delta - i - 1 : qNumbers.size()); item++) {
+                vecItem.emplace_back(qNumbers.front());
+                qNumbers.pop_front();
+            }
+
+            vecData.emplace_back(vecItem);
+        }
     }
 
     if (recursive) {
